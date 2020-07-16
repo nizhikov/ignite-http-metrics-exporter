@@ -19,13 +19,19 @@ package org.apache.ignite.viewer;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.HashMap;
+import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
+import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.spi.metric.BooleanMetric;
+import org.apache.ignite.spi.metric.HistogramMetric;
+import org.apache.ignite.spi.metric.Metric;
 import org.apache.ignite.spi.metric.ObjectMetric;
 import org.apache.ignite.viewer.config.MetricsGroup;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Metrics group handler.
@@ -33,6 +39,9 @@ import org.eclipse.jetty.server.handler.AbstractHandler;
 public class MetricsGroupHandler extends AbstractHandler {
     /** Metrics group. */
     private final MetricsGroup mgrp;
+
+    /** Cached histogram metrics intervals names. */
+    private final Map<String, T2<long[], String[]>> histogramNames = new HashMap<>();
 
     /**
      * @param mgrp Metrics group.
@@ -53,14 +62,44 @@ public class MetricsGroupHandler extends AbstractHandler {
         PrintWriter writer = response.getWriter();
 
         mgrp.forEach(m -> {
-            if (m instanceof HitRateMetric ||
-                m instanceof ObjectMetric)
-                return;
+            if (m instanceof HistogramMetric) {
+                long[] bounds = ((HistogramMetric)m).bounds();
+                long[] vals = ((HistogramMetric)m).value();
 
-            writer.print(m.name());
-            writer.print('=');
-            writer.print(m.getAsString());
-            writer.print('\n');
+                String name = prepareName(m);
+
+                for (int i = 0; i < bounds.length; i++) {
+                    writer.print(name);
+                    writer.print("{le=\"");
+                    writer.print(bounds[i]);
+                    writer.print("\"} ");
+                    writer.print(vals[i]);
+                    writer.print('\n');
+                }
+
+                writer.print(name);
+                writer.print("{le=\"+Inf\"} ");
+                writer.print(vals[vals.length - 1]);
+                writer.print('\n');
+            }
+            else if (m instanceof ObjectMetric) {
+            }
+            else {
+                writer.print(prepareName(m));
+                writer.print(' ');
+
+                if (m instanceof BooleanMetric)
+                    writer.print(((BooleanMetric)m).value() ? '1' : '0');
+                else
+                    writer.print(m.getAsString());
+                writer.print('\n');
+            }
         });
+    }
+
+    @NotNull private String prepareName(Metric m) {
+        return m.name()
+            .replace('.', '_')
+            .replace('-', '_');
     }
 }

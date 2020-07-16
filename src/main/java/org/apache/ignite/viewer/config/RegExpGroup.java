@@ -25,11 +25,15 @@ import org.apache.ignite.spi.metric.ReadOnlyMetricRegistry;
  */
 public class RegExpGroup extends AbstractFilterGroup {
     /** Expression to filter registries. */
-    private Pattern pattern;
+    private Pattern includePattern;
+
+    /** Expression to filter registries. */
+    private Pattern excludePattern;
 
     /** {@inheritDoc} */
     @Override boolean included(ReadOnlyMetricRegistry mreg) {
-        return pattern.matcher(mreg.name()).matches();
+        return includePattern.matcher(mreg.name()).matches() &&
+            (excludePattern == null || !excludePattern.matcher(mreg.name()).matches());
     }
 
     /**
@@ -37,6 +41,14 @@ public class RegExpGroup extends AbstractFilterGroup {
      * @param regExp Regular expression.
      */
     public void setRegExp(String regExp) {
-        this.pattern = Pattern.compile(regExp);
+        this.includePattern = Pattern.compile(regExp);
+    }
+
+    /**
+     * Sets regular expression string to exclude registries.
+     * @param regExp Regular expression.
+     */
+    public void setExcludeRegExp(String regExp) {
+        this.excludePattern = Pattern.compile(regExp);
     }
 }

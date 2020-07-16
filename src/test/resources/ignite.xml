@@ -28,6 +28,7 @@
             <list>
                 <bean class="org.apache.ignite.configuration.CacheConfiguration">
                     <property name="name" value="my-cache"/>
+                    <property name="statisticsEnabled" value="true"/>
                 </bean>
             </list>
         </property>
