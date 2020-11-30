@@ -61,6 +61,30 @@ public class TestHttpMetricsExporterSpi {
         Thread.sleep(60_000*60);
     }
 
+    @Test
+    public void testPortFromNodeAttributes() throws Exception {
+        Ignite g1 = G.start("ignite-with-attribute.xml");
+
+        IgniteCache<Object, Object> cache = g1.cache("my-cache");
+
+        doOps(cache);
+
+        Thread.sleep(60_000*60);
+    }
+
+    @Test
+    public void testPortSystemProperty() throws Exception {
+        System.setProperty(IgniteHttpMetricsExporterSpi.PORT_ATTRIBUTE_NAME, "8082");
+
+        Ignite g1 = G.start("ignite.xml");
+
+        IgniteCache<Object, Object> cache = g1.cache("my-cache");
+
+        doOps(cache);
+
+        Thread.sleep(60_000*60);
+    }
+
     private void doOps(IgniteCache<Object, Object> cache) {
         for (int i=0; i< 10_000; i++) {
             if (ThreadLocalRandom.current().nextBoolean())

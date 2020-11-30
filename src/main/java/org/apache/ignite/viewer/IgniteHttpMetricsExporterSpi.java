@@ -20,6 +20,7 @@ package org.apache.ignite.viewer;
 import java.util.List;
 import java.util.function.Predicate;
 import org.apache.ignite.spi.IgniteSpiAdapter;
+import org.apache.ignite.spi.IgniteSpiContext;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.metric.MetricExporterSpi;
 import org.apache.ignite.spi.metric.ReadOnlyMetricManager;
@@ -34,14 +35,14 @@ import org.jetbrains.annotations.Nullable;
  *
  */
 public class IgniteHttpMetricsExporterSpi extends IgniteSpiAdapter implements MetricExporterSpi {
+    /** Name of the attribute to specify HTTP port. */
+    public static final String PORT_ATTRIBUTE_NAME = "http_metrics_exporter.port";
+
     /** Http port. */
-    private int port = 8080;
+    private int port = -1;
 
     /** Metric manager. */
     private ReadOnlyMetricManager mreg;
-
-    /** Filter. */
-    private Predicate<ReadOnlyMetricRegistry> filter;
 
     private List<MetricsGroup> groups;
 
@@ -49,7 +50,9 @@ public class IgniteHttpMetricsExporterSpi extends IgniteSpiAdapter implements Me
     private Server srv;
 
     /** {@inheritDoc} */
-    @Override public void spiStart(@Nullable String igniteInstanceName) throws IgniteSpiException {
+    @Override protected void onContextInitialized0(IgniteSpiContext spiCtx) throws IgniteSpiException {
+        clarifyPort();
+
         srv = new Server(port);
 
         ContextHandler[] ctxs = new ContextHandler[groups.size()];
@@ -73,6 +76,36 @@ public class IgniteHttpMetricsExporterSpi extends IgniteSpiAdapter implements Me
         }
     }
 
+    /** */
+    private void clarifyPort() {
+        if (port != -1) {
+            log.info("Using port from config [port=" + port + ']');
+        }
+        else if (ignite().cluster().localNode().attribute(PORT_ATTRIBUTE_NAME) != null) {
+            port = Integer.parseInt(ignite().cluster().localNode().attributes().get(PORT_ATTRIBUTE_NAME).toString());
+
+            log.info("Using port from node attributes [port=" + port + ']');
+        }
+        else if (!"-1".equals(System.getProperty(PORT_ATTRIBUTE_NAME, "-1"))) {
+            port = Integer.parseInt(System.getProperty(PORT_ATTRIBUTE_NAME));
+
+            log.info("Using port from system property [port=" + port + ']');
+        }
+        else if (System.getenv(PORT_ATTRIBUTE_NAME) != null) {
+            port = Integer.parseInt(System.getenv(PORT_ATTRIBUTE_NAME));
+
+            log.info("Using port from environment [port=" + port + ']');
+        } else {
+            port = 8080;
+
+            log.info("Using default port [port=" + port + ']');
+        }
+    }
+
+    @Override public void spiStart(@Nullable String s) throws IgniteSpiException {
+        // No-op.
+    }
+
     /** {@inheritDoc} */
     @Override public void spiStop() throws IgniteSpiException {
         try {
@@ -90,7 +123,7 @@ public class IgniteHttpMetricsExporterSpi extends IgniteSpiAdapter implements Me
 
     /** {@inheritDoc} */
     @Override public void setExportFilter(Predicate<ReadOnlyMetricRegistry> filter) {
-        this.filter = filter;
+        // No-op.
     }
 
     /** Sets http port to export metrics. */
