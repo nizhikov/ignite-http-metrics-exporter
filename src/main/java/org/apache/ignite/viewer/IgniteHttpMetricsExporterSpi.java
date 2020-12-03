@@ -55,6 +55,8 @@ public class IgniteHttpMetricsExporterSpi extends IgniteSpiAdapter implements Me
 
         srv = new Server(port);
 
+        System.setProperty(PORT_ATTRIBUTE_NAME, String.valueOf(port));
+
         ContextHandler[] ctxs = new ContextHandler[groups.size()];
 
         for (int i = 0; i < groups.size(); i++) {
@@ -80,30 +82,42 @@ public class IgniteHttpMetricsExporterSpi extends IgniteSpiAdapter implements Me
     private void clarifyPort() {
         if (port != -1) {
             log.info("Using port from config [port=" + port + ']');
+
+            System.setProperty(PORT_ATTRIBUTE_NAME, String.valueOf(port));
         }
         else if (ignite().cluster().localNode().attribute(PORT_ATTRIBUTE_NAME) != null) {
             port = Integer.parseInt(ignite().cluster().localNode().attributes().get(PORT_ATTRIBUTE_NAME).toString());
 
             log.info("Using port from node attributes [port=" + port + ']');
+
+            System.setProperty(PORT_ATTRIBUTE_NAME, String.valueOf(port));
+
         }
         else if (!"-1".equals(System.getProperty(PORT_ATTRIBUTE_NAME, "-1"))) {
             port = Integer.parseInt(System.getProperty(PORT_ATTRIBUTE_NAME));
 
             log.info("Using port from system property [port=" + port + ']');
+
+            System.setProperty(PORT_ATTRIBUTE_NAME, String.valueOf(port));
         }
         else if (System.getenv(PORT_ATTRIBUTE_NAME) != null) {
             port = Integer.parseInt(System.getenv(PORT_ATTRIBUTE_NAME));
 
             log.info("Using port from environment [port=" + port + ']');
+
+            System.setProperty(PORT_ATTRIBUTE_NAME, String.valueOf(port));
         } else {
-            port = 8080;
+            port = 8081;
 
             log.info("Using default port [port=" + port + ']');
+
+            System.setProperty(PORT_ATTRIBUTE_NAME, String.valueOf(port));
         }
     }
 
     @Override public void spiStart(@Nullable String s) throws IgniteSpiException {
         // No-op.
+
     }
 
     /** {@inheritDoc} */
@@ -129,6 +143,8 @@ public class IgniteHttpMetricsExporterSpi extends IgniteSpiAdapter implements Me
     /** Sets http port to export metrics. */
     public void setPort(int port) {
         this.port = port;
+
+        System.setProperty(PORT_ATTRIBUTE_NAME, String.valueOf(port));
     }
 
     /** Sets metric groups. */
